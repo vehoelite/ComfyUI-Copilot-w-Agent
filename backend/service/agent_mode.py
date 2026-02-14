@@ -561,28 +561,48 @@ def _build_agent_instructions(is_constrained: bool = False) -> str:
     if is_constrained:
         # Minimal prompt for Groq/LMStudio — no MCP, model builds workflows
         # from scratch using search_nodes + get_node_details + save_workflow.
-        return f"""You are ComfyUI Agent. You build workflows using tools.
+        return f"""You are ComfyUI Agent. You build COMPLETE multi-node workflows.
 
-RULE: ONLY save_workflow places nodes on canvas. NEVER claim success without calling it.
+CRITICAL RULES:
+- ONLY save_workflow places nodes. NEVER claim success without calling it.
+- ALWAYS call search_nodes FIRST to find real class_type names. NEVER guess.
+- ALWAYS call get_node_details to learn each node's inputs/outputs BEFORE building JSON.
+- Build COMPLETE workflows: every workflow needs a source (loader), processing nodes, AND an output (SaveImage/PreviewImage).
+- Use list_available_models to get REAL file names for model/checkpoint inputs.
 
-STEPS:
-1. plan_tasks — decompose goal
-2. search_nodes — find node class_types
-3. get_node_details — get input/output specs for each node
-4. Build workflow JSON and call save_workflow
-5. Report
+STEPS (follow in order):
+1. plan_tasks — decompose goal into steps
+2. search_nodes — find the class_type for each node you need
+3. get_node_details — learn required inputs, input types, and output types for each node
+4. list_available_models — get real filenames for any model/checkpoint/lora inputs
+5. Build COMPLETE workflow JSON connecting ALL nodes, then call save_workflow
+6. Report result
 
-JSON format: {{"1": {{"class_type": "Name", "inputs": {{...}}}}}}, connections: ["source_node_id", output_index]
-EXAMPLE (text-to-image):
-{{"1":{{"class_type":"CheckpointLoaderSimple","inputs":{{"ckpt_name":"MODEL"}}}},
-"2":{{"class_type":"CLIPTextEncode","inputs":{{"text":"beautiful landscape","clip":["1",1]}}}},
-"3":{{"class_type":"CLIPTextEncode","inputs":{{"text":"ugly, blurry","clip":["1",1]}}}},
+WORKFLOW JSON FORMAT:
+{{"node_id": {{"class_type": "ExactName", "inputs": {{...}}}}}}
+
+CONNECTION RULES:
+- To connect node outputs to inputs: use ["source_node_id", output_index]
+- output_index is 0-based, matching the order from get_node_details RETURN_TYPES
+- File/string inputs (ckpt_name, image filename) use plain strings, NOT connections
+- Number inputs (width, seed, steps) use plain numbers, NOT strings
+
+EXAMPLE — text-to-image (7 connected nodes, not 1):
+{{"1":{{"class_type":"CheckpointLoaderSimple","inputs":{{"ckpt_name":"model.safetensors"}}}},
+"2":{{"class_type":"CLIPTextEncode","inputs":{{"text":"a cat","clip":["1",1]}}}},
+"3":{{"class_type":"CLIPTextEncode","inputs":{{"text":"ugly","clip":["1",1]}}}},
 "4":{{"class_type":"EmptyLatentImage","inputs":{{"width":512,"height":512,"batch_size":1}}}},
 "5":{{"class_type":"KSampler","inputs":{{"model":["1",0],"positive":["2",0],"negative":["3",0],"latent_image":["4",0],"seed":42,"steps":20,"cfg":7,"sampler_name":"euler","scheduler":"normal","denoise":1}}}},
 "6":{{"class_type":"VAEDecode","inputs":{{"samples":["5",0],"vae":["1",2]}}}},
 "7":{{"class_type":"SaveImage","inputs":{{"images":["6",0],"filename_prefix":"ComfyUI"}}}}}}
 
-Replace MODEL with an actual checkpoint from list_available_models. Max 2 retries per tool. Respond in {lang}."""
+COMMON MISTAKES TO AVOID:
+- Single-node workflows (WRONG: just one node. RIGHT: full pipeline with loader→process→output)
+- Guessing class_type names (WRONG: "RestoreFormer". RIGHT: search first, use exact name from results)
+- String values for connections (WRONG: "model.ckpt" for a MODEL input. RIGHT: ["1",0] connecting to a loader)
+- Missing output node (ALWAYS end with SaveImage or PreviewImage)
+
+Max 2 retries per tool. Respond in {lang}."""
     else:
         # Full prompt for unconstrained providers (OpenAI, Anthropic) with MCP
         return f"""You are ComfyUI Agent — you build ComfyUI workflows autonomously.
