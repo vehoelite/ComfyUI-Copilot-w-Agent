@@ -257,9 +257,18 @@ Frontend (React + Vite + Tailwind)
 
 Contributions welcome! This fork aims to push ComfyUI-Copilot's capabilities forward while staying compatible with upstream.
 
+### Contributing to This Fork
 - **Bug reports** - Open an issue with reproduction steps
 - **Feature requests** - Describe the use case
 - **Pull requests** - Fork, branch, PR with clear description
+
+### Contributing Back to Original Repository
+Want to help contribute these enhancements to the original ComfyUI-Copilot project? See:
+- **[HOW_TO_SUBMIT_PR.md](./HOW_TO_SUBMIT_PR.md)** - Detailed guide for submitting PRs to upstream
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - General contribution guidelines
+- **[NEXT_STEPS.md](./NEXT_STEPS.md)** - Quick start guide for getting your changes merged
+
+We've prepared comprehensive documentation to make it easy to contribute these fixes and features back to AIDC-AI's original repository.
 
 ---
 
